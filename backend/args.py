@@ -62,6 +62,22 @@ args = parser.parse_known_args()[0]
 
 # Some dynamic args that may be changed by webui rather than cmd flags.
 dynamic_args = dict(
-    embedding_dir='./embeddings',
-    emphasis_name='original'
+    embedding_dir="./embeddings",
+    emphasis_name="original",
+    forge_unet_storage_dtype=None,
+    kontext=False,
+    edit=False,
+    nunchaku=False,
+    ref_latents=[],
+    concat_latent=None,
 )
+"""
+Some parameters that are used throughout the Webui
+- embedding_dir: `str` - set in modules/sd_models/forge_model_reload
+- forge_unet_storage_dtype: `torch.dtype` - set in modules/sd_models/forge_model_reload
+- kontext: `bool` - Flux Kontext
+- edit: `bool` - Qwen-Image-Edit
+- nunchaku: `bool` - Nunchaku (SVDQ) Models
+- ref_latents: `list[torch.Tensor]` - Reference Latent(s) for Flux Kontext & Qwen-Image-Edit
+- concat_latent: `torch.Tensor` - Input Latent for Wan 2.2 I2V
+"""
