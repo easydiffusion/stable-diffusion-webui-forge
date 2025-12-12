@@ -234,6 +234,7 @@ class Api:
         self.add_api_route("/sdapi/v1/refresh-embeddings", self.refresh_embeddings, methods=["POST"])
         self.add_api_route("/sdapi/v1/refresh-checkpoints", self.refresh_checkpoints, methods=["POST"])
         self.add_api_route("/sdapi/v1/refresh-vae", self.refresh_vae, methods=["POST"])
+        self.add_api_route("/sdapi/v1/refresh-vae-and-text-encoders", self.refresh_vae_and_text_encoders, methods=["POST"])
         self.add_api_route("/sdapi/v1/create/embedding", self.create_embedding, methods=["POST"], response_model=models.CreateResponse)
         self.add_api_route("/sdapi/v1/create/hypernetwork", self.create_hypernetwork, methods=["POST"], response_model=models.CreateResponse)
         self.add_api_route("/sdapi/v1/memory", self.get_memory, methods=["GET"], response_model=models.MemoryResponse)
@@ -778,6 +779,12 @@ class Api:
     def refresh_vae(self):
         with self.queue_lock:
             shared_items.refresh_vae_list()
+
+    def refresh_vae_and_text_encoders(self):
+        from modules_forge.main_entry import refresh_models
+
+        with self.queue_lock:
+            refresh_models()
 
     def create_embedding(self, args: dict):
         try:
