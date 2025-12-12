@@ -482,6 +482,7 @@ def forge_model_reload():
 
     if model_data.sd_model:
         model_data.sd_model = None
+        model_data.forge_hash = None
         memory_management.unload_all_models()
         memory_management.soft_empty_cache()
         gc.collect()
