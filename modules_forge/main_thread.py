@@ -33,8 +33,8 @@ class Task:
         except Exception as e:
             traceback.print_exc()
             print(e)
-            self.exception = e
-            last_exception = e
+            self.exception = str(e)
+            last_exception = str(e)
 
 
 def loop():
@@ -74,4 +74,3 @@ def run_and_wait_result(func, *args, **kwargs):
             with lock:
                 finished_list.remove(finished_task)
             return finished_task.result
-
