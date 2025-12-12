@@ -148,3 +148,6 @@ parser.add_argument(
     help="Path to directory with annotator model directories",
     default=None,
 )
+
+# Easy Diffusion arguments
+parser.add_argument("--parent-pid", type=int, default=-1, help='parent process id, if running webui as a sub-process')

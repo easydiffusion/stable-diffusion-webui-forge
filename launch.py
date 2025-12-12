@@ -2,6 +2,7 @@
 # faulthandler.enable()
 
 from modules import launch_utils
+from modules import parent_process_monitor
 
 args = launch_utils.args
 python = launch_utils.python
@@ -28,6 +29,10 @@ start = launch_utils.start
 
 
 def main():
+    if args.parent_pid != -1:
+        print(f"Monitoring parent process for termination. Parent PID: {args.parent_pid}")
+        parent_process_monitor.start_monitor_thread(args.parent_pid)
+
     if args.dump_sysinfo:
         filename = launch_utils.dump_sysinfo()
 
