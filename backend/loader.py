@@ -545,11 +545,7 @@ def replace_state_dict(sd, asd, guess):
         for k in keys_to_delete:
             del sd[k]
         for k, v in asd.items():
-<<<<<<< HEAD
             sd[f"{text_encoder_key_prefix}t5xxl.transformer.{k}"] = v
-=======
-            sd[f"{text_encoder_key_prefix}t5xxl.transformer.{k}"] = True
-        sd[f"{text_encoder_key_prefix}t5xxl.transformer.filename"] = str(path)
 
     if "model.layers.0.post_feedforward_layernorm.weight" in asd:
         assert "model.layers.0.self_attn.q_norm.weight" not in asd
@@ -557,7 +553,6 @@ def replace_state_dict(sd, asd, guess):
             if k == "spiece_model":
                 continue
             sd[f"{text_encoder_key_prefix}gemma2_2b.{k}"] = v
->>>>>>> 93fd1ab2 (Z-Image-Turbo)
 
     elif "model.layers.0.self_attn.k_proj.bias" in asd:
         weight = asd["model.layers.0.self_attn.k_proj.bias"]
