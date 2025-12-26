@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 
 from backend.memory_management import (
+    cast_to_device,
     is_device_cpu,
     text_encoder_device,
     xformers_enabled,
@@ -91,6 +92,25 @@ class Gemma2_2B_Config:
     final_norm: bool = True
 
 
+def _rms_norm(x, weight, eps):
+    return nn.functional.rms_norm(x, weight.shape, weight=cast_to_device(weight, device=x.device, dtype=x.dtype), eps=eps)
+
+
+class RMSNorm(nn.Module):
+    def __init__(self, dim: int, eps: float, add=False):
+        super().__init__()
+        self.weight = nn.Parameter(torch.empty(dim))
+        self.eps = eps
+        self.add = add
+
+    def forward(self, x: torch.Tensor):
+        w = self.weight
+        if self.add:
+            w = w + 1.0
+
+        return _rms_norm(x, w, self.eps)
+
+
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
@@ -159,12 +179,12 @@ class Attention(nn.Module):
         self.o_proj = nn.Linear(self.inner_size, config.hidden_size, bias=False)
 
         if config.q_norm == "gemma3":
-            self.q_norm = nn.RMSNorm(self.head_dim, eps=config.rms_norm_eps, add=config.rms_norm_add)
+            self.q_norm = RMSNorm(self.head_dim, eps=config.rms_norm_eps, add=config.rms_norm_add)
         else:
             self.q_norm = None
 
         if config.k_norm == "gemma3":
-            self.k_norm = nn.RMSNorm(self.head_dim, eps=config.rms_norm_eps, add=config.rms_norm_add)
+            self.k_norm = RMSNorm(self.head_dim, eps=config.rms_norm_eps, add=config.rms_norm_add)
         else:
             self.k_norm = None
 
@@ -218,8 +238,8 @@ class TransformerBlock(nn.Module):
         super().__init__()
         self.self_attn = Attention(config)
         self.mlp = MLP(config)
-        self.input_layernorm = nn.RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.post_attention_layernorm = nn.RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
         self,
@@ -253,10 +273,10 @@ class TransformerBlockGemma2(nn.Module):
         super().__init__()
         self.self_attn = Attention(config)
         self.mlp = MLP(config)
-        self.input_layernorm = nn.RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
-        self.post_attention_layernorm = nn.RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
-        self.pre_feedforward_layernorm = nn.RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
-        self.post_feedforward_layernorm = nn.RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
+        self.pre_feedforward_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
+        self.post_feedforward_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
 
         if config.sliding_attention is not None:
             self.sliding_attention = config.sliding_attention[index % len(config.sliding_attention)]
@@ -319,7 +339,7 @@ class Llama2_(nn.Module):
         self.layers = nn.ModuleList([transformer(config, index=i) for i in range(config.num_hidden_layers)])
 
         if config.final_norm:
-            self.norm = nn.RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
+            self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps, add=config.rms_norm_add)
         else:
             self.norm = None
 
