@@ -309,6 +309,9 @@ def state_dict_parameters(sd):
 
 
 def state_dict_dtype(state_dict):
+    if state_dict is None:
+        return None
+
     for k, v in state_dict.items():
         if hasattr(v, 'gguf_cls'):
             return 'gguf'

@@ -35,6 +35,7 @@ dir_path = os.path.dirname(__file__)
 
 def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_path, state_dict):
     config_path = os.path.join(repo_path, component_name)
+    state_dict_dtype = memory_management.state_dict_dtype(state_dict)
 
     if component_name in ['feature_extractor', 'safety_checker']:
         return None
@@ -48,6 +49,7 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
             comp = cls.from_pretrained(os.path.join(repo_path, component_name))
             comp._eventual_warn_about_too_long_sequence = lambda *args, **kwargs: None
             return comp
+
         if cls_name in ['AutoencoderKL']:
             assert isinstance(state_dict, dict) and len(state_dict) > 16, 'You do not have VAE state dict!'
 
@@ -236,9 +238,14 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
 
                 model_loader = lambda c: NextDiT(**c)
 
+                if state_dict_dtype == "gguf":
+                    # bugfix: change the shape of "x_pad_token", "cap_pad_token" from [3840] to [1, 3840]
+                    for key in ["x_pad_token", "cap_pad_token"]:
+                        if key in state_dict:
+                            state_dict[key] = state_dict[key].unsqueeze(0)
+
             unet_config = guess.unet_config.copy()
             state_dict_parameters = memory_management.state_dict_parameters(state_dict)
-            state_dict_dtype = memory_management.state_dict_dtype(state_dict)
 
             storage_dtype = memory_management.unet_dtype(model_params=state_dict_parameters, supported_dtypes=guess.supported_inference_dtypes)
 
