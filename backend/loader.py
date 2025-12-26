@@ -319,15 +319,31 @@ def replace_state_dict(sd, asd, guess):
             "ffn_up.weight": "mlp.up_proj.weight",
             "ffn_down.weight": "mlp.down_proj.weight",
         }
+        # Keys that need to be dequantized (2D weight matrices, not norms)
+        gguf_qwen3_dequant_keys = {
+            "token_embd.weight",
+            "attn_q.weight",
+            "attn_k.weight",
+            "attn_v.weight",
+            "attn_output.weight",
+            "ffn_gate.weight",
+            "ffn_up.weight",
+            "ffn_down.weight",
+        }
 
         asd_new = {}
         for k, v in asd.items():
             new_k = k
+            needs_dequant = False
+
             # Handle global keys
             for gguf_key, target_key in gguf_qwen3_format.items():
                 if k == gguf_key:
                     new_k = target_key
+                    if gguf_key in gguf_qwen3_dequant_keys:
+                        needs_dequant = True
                     break
+
             # Handle layer keys
             if k.startswith("blk."):
                 parts = k.split(".", 2)
@@ -337,7 +353,14 @@ def replace_state_dict(sd, asd, guess):
                     for gguf_suffix, target_suffix in gguf_qwen3_layer_mappings.items():
                         if layer_suffix == gguf_suffix:
                             new_k = f"model.layers.{layer_num}.{target_suffix}"
+                            if layer_suffix in gguf_qwen3_dequant_keys:
+                                needs_dequant = True
                             break
+
+            # Dequantize GGUF parameters
+            if needs_dequant and hasattr(v, 'dequantize_as_pytorch_parameter'):
+                v = v.dequantize_as_pytorch_parameter()
+
             asd_new[new_k] = v
         asd.clear()
         asd = asd_new
